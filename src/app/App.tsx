@@ -1,232 +1,292 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Shield, ShieldAlert, ShieldCheck, RefreshCw, Info } from 'lucide-react';
+import { Shield, RefreshCw, AlertTriangle, CheckCircle2, Info, ArrowRight } from 'lucide-react';
 
 interface Chunk {
   id: string;
   text: string;
-  score: number;
-  explanation: string;
 }
 
-const generateAnalysis = (text: string): Chunk[] => {
+interface Reference {
+  id: string;
+  chunkIds: string[];
+  title: string;
+  explanation: string;
+  type: 'positive' | 'warning' | 'neutral';
+}
+
+interface Analysis {
+  overallScore: number;
+  summary: string;
+  chunks: Chunk[];
+  references: Reference[];
+}
+
+const generateAnalysis = (text: string): Analysis => {
   // Split by sentence endings, keeping the punctuation attached to the sentence
   const sentenceRegex = /[^.!?]+[.!?]+[\])'"`’”]*\s*|.+/g;
-  const matches = text.match(sentenceRegex);
+  const matches = text.match(sentenceRegex) || [];
   
-  if (!matches) return [];
+  const chunks = matches.map((sentence, i) => ({
+    id: `chunk-${i}`,
+    text: sentence
+  }));
 
-  const explanations = [
-    "Supported by multiple peer-reviewed studies.",
-    "Contains subjective language and lacks citations.",
-    "Broadly accepted as factual in reputable sources.",
-    "Potential exaggeration; verify with primary sources.",
-    "Statistical claim without clear methodology provided.",
-    "Aligns with consensus among domain experts.",
-    "Anecdotal evidence; cannot be broadly applied."
-  ];
+  const references: Reference[] = [];
+  let score = 7; // Base score
 
-  return matches.map((sentence, i) => {
-    let hash = 0;
-    for (let j = 0; j < sentence.length; j++) {
-      hash = sentence.charCodeAt(j) + ((hash << 5) - hash);
-    }
-    const score = Math.abs(hash % 10) + 1; // 1 to 10
-    const explIndex = Math.abs(hash % explanations.length);
+  if (chunks.length > 0) {
+    // Generate deterministic but dynamic-feeling mock references based on the text
+    const textLength = text.length;
     
-    return {
-      id: `chunk-${i}`,
-      text: sentence,
-      score,
-      explanation: explanations[explIndex]
-    };
-  });
+    // Reference 1: Often targets the beginning
+    references.push({
+      id: 'ref-1',
+      chunkIds: [chunks[0].id],
+      title: "Unverified Claim",
+      explanation: "This opening statement presents a factual claim without a verifiable source or clear context.",
+      type: 'warning'
+    });
+    score -= 1;
+
+    // Reference 2: If there's enough text, target the middle
+    if (chunks.length > 2) {
+      const midIndex = Math.floor(chunks.length / 2);
+      references.push({
+        id: 'ref-2',
+        chunkIds: [chunks[midIndex].id],
+        title: "Strong Corroboration",
+        explanation: "This point is generally accepted and aligns well with established consensus and available records.",
+        type: 'positive'
+      });
+      score += 2;
+    }
+    
+    // Reference 3: Target the end or specific punctuation if available
+    if (chunks.length > 4) {
+      references.push({
+        id: 'ref-3',
+        chunkIds: [chunks[chunks.length - 1].id],
+        title: "Subjective Framing",
+        explanation: "The phrasing here relies on subjective interpretation rather than objective, measurable metrics.",
+        type: 'neutral'
+      });
+      score -= 1;
+    }
+  }
+
+  const finalScore = Math.min(Math.max(score, 1), 10);
+
+  return {
+    overallScore: finalScore,
+    summary: finalScore >= 8 
+      ? "Overall, this text appears to be highly credible. Most statements align with established facts, though minor points may lack direct citations."
+      : finalScore >= 5
+      ? "This text has mixed credibility. While it contains factual elements, several claims are unsupported or rely heavily on subjective language."
+      : "The credibility of this text is questionable. Multiple statements are unverified, lack sources, or contradict established consensus.",
+    chunks,
+    references
+  };
 };
 
 export default function App() {
   const [inputText, setInputText] = useState("");
-  const [chunks, setChunks] = useState<Chunk[]>([]);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [pinnedId, setPinnedId] = useState<string | null>(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-
-  // Use a ref to track if we should update position (only if not pinned)
-  const isPinnedRef = useRef(false);
-  isPinnedRef.current = pinnedId !== null;
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [activeRefId, setActiveRefId] = useState<string | null>(null);
+  
+  const chunkRefs = useRef<Record<string, HTMLSpanElement | null>>({});
 
   const handlePasteOrChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputText(e.target.value);
     if (e.target.value.trim().length > 0) {
-      setChunks(generateAnalysis(e.target.value));
-    }
-  };
-
-  const activeId = pinnedId || hoveredId;
-  const activeChunk = chunks.find(c => c.id === activeId);
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPinnedRef.current) {
-      setTooltipPos({ x: e.clientX, y: e.clientY });
-    }
-  };
-
-  const handleChunkClick = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (pinnedId === id) {
-      // Unpin
-      setPinnedId(null);
+      setAnalysis(generateAnalysis(e.target.value));
     } else {
-      // Pin new
-      setPinnedId(id);
-      setHoveredId(null);
-      setTooltipPos({ x: e.clientX, y: e.clientY });
+      setAnalysis(null);
     }
   };
-
-  const handleDocumentClick = () => {
-    if (pinnedId) {
-      setPinnedId(null);
-    }
-  };
-
-  useEffect(() => {
-    document.addEventListener('click', handleDocumentClick);
-    return () => document.removeEventListener('click', handleDocumentClick);
-  }, [pinnedId]);
 
   const reset = () => {
     setInputText("");
-    setChunks([]);
-    setPinnedId(null);
-    setHoveredId(null);
+    setAnalysis(null);
+    setActiveRefId(null);
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 8) return "text-emerald-500 bg-emerald-50 border-emerald-200";
-    if (score >= 5) return "text-amber-500 bg-amber-50 border-amber-200";
-    return "text-rose-500 bg-rose-50 border-rose-200";
+  const handleReferenceClick = (refId: string) => {
+    if (activeRefId === refId) {
+      setActiveRefId(null); // Toggle off
+    } else {
+      setActiveRefId(refId);
+      
+      // Scroll the first active chunk into view
+      const ref = analysis?.references.find(r => r.id === refId);
+      if (ref && ref.chunkIds.length > 0) {
+        const firstChunkId = ref.chunkIds[0];
+        const element = chunkRefs.current[firstChunkId];
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
   };
 
-  const getHighlightColor = (score: number) => {
-    if (score >= 8) return "bg-emerald-100/80 text-emerald-950";
-    if (score >= 5) return "bg-amber-100/80 text-amber-950";
-    return "bg-rose-100/80 text-rose-950";
-  };
+  const activeChunkIds = analysis?.references.find(r => r.id === activeRefId)?.chunkIds || [];
 
   return (
-    <div 
-      className="min-h-screen bg-[#FAFAFA] text-gray-900 font-sans selection:bg-gray-200 flex flex-col items-center py-20 px-6 sm:px-12 relative"
-      onMouseMove={handleMouseMove}
-    >
-      <div className="max-w-3xl w-full">
+    <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans selection:bg-gray-200 py-12 px-6 sm:px-12 flex flex-col items-center">
+      <div className={`w-full transition-all duration-700 ease-in-out ${analysis ? 'max-w-6xl' : 'max-w-3xl mt-20'}`}>
+        
+        {/* Header */}
         <header className="mb-12 flex justify-between items-center opacity-80">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5" />
-            <h1 className="text-sm font-medium tracking-widest uppercase">CredCheck</h1>
+            <h1 className="text-sm font-semibold tracking-widest uppercase">CredCheck</h1>
           </div>
-          {chunks.length > 0 && (
+          {analysis && (
             <button 
               onClick={reset}
-              className="text-xs font-medium uppercase tracking-wider flex items-center gap-2 hover:bg-gray-200 px-3 py-1.5 rounded-full transition-colors"
+              className="text-xs font-medium uppercase tracking-wider flex items-center gap-2 hover:bg-gray-100 px-4 py-2 rounded-full transition-colors"
             >
-              <RefreshCw className="w-3 h-3" />
-              Reset
+              <RefreshCw className="w-3.5 h-3.5" />
+              Analyze New
             </button>
           )}
         </header>
 
-        <main className="w-full">
-          {chunks.length === 0 ? (
+        {/* Main Content Area */}
+        <main>
+          {!analysis ? (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="relative"
             >
               <textarea
-                className="w-full h-[50vh] bg-transparent border-0 focus:ring-0 text-2xl sm:text-3xl leading-relaxed resize-none placeholder:text-gray-300"
-                placeholder="Paste your text here to analyze its credibility..."
+                className="w-full h-[60vh] bg-transparent border-0 focus:ring-0 text-3xl sm:text-4xl leading-relaxed font-light resize-none placeholder:text-gray-300 outline-none"
+                placeholder="Paste your text here to generate a credibility report..."
                 value={inputText}
                 onChange={handlePasteOrChange}
                 autoFocus
               />
             </motion.div>
           ) : (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-2xl sm:text-3xl leading-relaxed font-light text-gray-400"
-            >
-              {chunks.map((chunk) => {
-                const isHovered = hoveredId === chunk.id;
-                const isPinned = pinnedId === chunk.id;
-                const isActive = isHovered || isPinned;
-                
-                return (
-                  <span
-                    key={chunk.id}
-                    className={`transition-all duration-300 cursor-pointer rounded-sm mix-blend-multiply ${
-                      isActive ? getHighlightColor(chunk.score) : 'text-gray-800 hover:text-gray-600'
-                    } ${isPinned ? 'ring-2 ring-black/5 ring-offset-2' : ''}`}
-                    onMouseEnter={() => {
-                      if (!pinnedId) setHoveredId(chunk.id);
-                    }}
-                    onMouseLeave={() => {
-                      if (!pinnedId && hoveredId === chunk.id) setHoveredId(null);
-                    }}
-                    onClick={(e) => handleChunkClick(chunk.id, e)}
-                  >
-                    {chunk.text}
-                  </span>
-                );
-              })}
-            </motion.div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
+              
+              {/* Left Column: Text Content */}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="lg:col-span-7 xl:col-span-8 text-xl sm:text-2xl leading-relaxed font-light text-gray-700"
+              >
+                {analysis.chunks.map((chunk) => {
+                  const isActive = activeChunkIds.includes(chunk.id);
+                  const isFaded = activeRefId !== null && !isActive;
+                  
+                  return (
+                    <span
+                      key={chunk.id}
+                      ref={(el) => chunkRefs.current[chunk.id] = el}
+                      className={`transition-all duration-500 rounded-sm ${
+                        isActive 
+                          ? 'bg-gray-900 text-white px-1 py-0.5 mx-0.5' 
+                          : isFaded 
+                            ? 'opacity-30' 
+                            : ''
+                      }`}
+                    >
+                      {chunk.text}
+                    </span>
+                  );
+                })}
+              </motion.div>
+
+              {/* Right Column: Report Sidebar */}
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                className="lg:col-span-5 xl:col-span-4 sticky top-12"
+              >
+                <div className="bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl p-8">
+                  {/* Overall Score */}
+                  <div className="mb-8">
+                    <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Overall Score</div>
+                    <div className="flex items-baseline gap-2">
+                      <span className={`text-6xl font-black tracking-tighter ${
+                        analysis.overallScore >= 8 ? 'text-emerald-600' :
+                        analysis.overallScore >= 5 ? 'text-amber-500' : 'text-rose-600'
+                      }`}>
+                        {analysis.overallScore}
+                      </span>
+                      <span className="text-2xl font-medium text-gray-300">/ 10</span>
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="mb-10">
+                    <p className="text-sm leading-relaxed text-gray-600">
+                      {analysis.summary}
+                    </p>
+                  </div>
+
+                  {/* References List */}
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Specific Points</div>
+                    <div className="space-y-3">
+                      {analysis.references.map((ref) => {
+                        const isActive = activeRefId === ref.id;
+                        
+                        return (
+                          <div 
+                            key={ref.id}
+                            onClick={() => handleReferenceClick(ref.id)}
+                            className={`p-4 rounded-2xl cursor-pointer transition-all border ${
+                              isActive 
+                                ? 'bg-gray-900 border-gray-900 text-white shadow-lg' 
+                                : 'bg-gray-50 border-gray-100 hover:bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`mt-0.5 flex-shrink-0 ${isActive ? 'text-white' : getIconColor(ref.type)}`}>
+                                {getIcon(ref.type)}
+                              </div>
+                              <div>
+                                <h3 className={`font-semibold text-sm mb-1 ${isActive ? 'text-white' : 'text-gray-900'}`}>
+                                  {ref.title}
+                                </h3>
+                                <p className={`text-xs leading-relaxed ${isActive ? 'text-gray-300' : 'text-gray-500'}`}>
+                                  {ref.explanation}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                </div>
+              </motion.div>
+            </div>
           )}
         </main>
       </div>
-
-      {/* Tooltip Overlay */}
-      <AnimatePresence>
-        {activeChunk && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className={`fixed z-50 w-72 p-5 rounded-2xl shadow-xl border backdrop-blur-md ${getScoreColor(activeChunk.score)}`}
-            style={{
-              left: tooltipPos.x + 15,
-              top: tooltipPos.y + 15,
-              transform: `translate(
-                ${typeof window !== 'undefined' && tooltipPos.x > window.innerWidth - 320 ? 'calc(-100% - 30px)' : '0'},
-                ${typeof window !== 'undefined' && tooltipPos.y > window.innerHeight - 200 ? 'calc(-100% - 30px)' : '0'}
-              )`
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                {activeChunk.score >= 8 ? <ShieldCheck className="w-5 h-5" /> : 
-                 activeChunk.score >= 5 ? <Info className="w-5 h-5" /> : 
-                 <ShieldAlert className="w-5 h-5" />}
-                <span className="font-bold text-sm uppercase tracking-wider">Credibility</span>
-              </div>
-              <div className="text-3xl font-black">
-                {activeChunk.score}<span className="text-sm font-medium opacity-50">/10</span>
-              </div>
-            </div>
-            
-            <p className="text-sm leading-relaxed font-medium opacity-90">
-              {activeChunk.explanation}
-            </p>
-
-            {pinnedId && (
-              <div className="mt-4 pt-3 border-t border-current/10 text-xs font-semibold uppercase tracking-widest opacity-60">
-                Pinned • Click elsewhere to close
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
+}
+
+// Helpers
+function getIcon(type: string) {
+  switch (type) {
+    case 'positive': return <CheckCircle2 className="w-4 h-4" />;
+    case 'warning': return <AlertTriangle className="w-4 h-4" />;
+    default: return <Info className="w-4 h-4" />;
+  }
+}
+
+function getIconColor(type: string) {
+  switch (type) {
+    case 'positive': return 'text-emerald-500';
+    case 'warning': return 'text-amber-500';
+    default: return 'text-blue-500';
+  }
 }
