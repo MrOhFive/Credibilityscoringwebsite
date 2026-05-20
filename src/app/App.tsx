@@ -17,8 +17,19 @@ interface Reference {
 
 interface Analysis {
   overallScore: number;
+
+  categoryScores: {
+    citations: number;
+    transparency: number;
+    sensationalism: number;
+    emotionalLanguage: number;
+    writingQuality: number;
+  };
+
   summary: string;
+
   chunks: Chunk[];
+
   references: Reference[];
 }
 
@@ -229,6 +240,41 @@ export default function App() {
                     </p>
                   </div>
 
+                  {/* Category Breakdown */}
+<div className="mb-10">
+  <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">
+    Category Breakdown
+  </div>
+
+  <div className="space-y-4">
+    {Object.entries(analysis.categoryScores).map(([key, value]) => (
+      <div key={key}>
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-sm font-medium capitalize text-gray-700">
+            {key.replace(/([A-Z])/g, ' $1')}
+          </span>
+
+          <span className="text-xs font-semibold text-gray-500">
+            {value}/10
+          </span>
+        </div>
+
+        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div
+            className={`h-2 rounded-full transition-all duration-700 ${
+              value >= 8
+                ? 'bg-emerald-500'
+                : value >= 5
+                ? 'bg-amber-500'
+                : 'bg-rose-500'
+            }`}
+            style={{ width: `${value * 10}%` }}
+          />
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
                   {/* References List */}
                   <div>
                     <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Specific Points</div>
