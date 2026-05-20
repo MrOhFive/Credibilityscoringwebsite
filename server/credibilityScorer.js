@@ -204,7 +204,7 @@ export function analyzeText(text) {
     emotionalLanguage * 0.15 +
     writingQuality * 0.10;
 
-  const finalScore = Math.round(finalScoreRaw);
+  const finalScore = Math.round(finalScoreRaw * 10);
 
   /*
     =========================

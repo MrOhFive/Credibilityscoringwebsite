@@ -218,7 +218,7 @@ export default function App() {
                       }`}>
                         {analysis.overallScore}
                       </span>
-                      <span className="text-2xl font-medium text-gray-300">/ 10</span>
+                      <span className="text-2xl font-medium text-gray-300">/ 100</span>
                     </div>
                   </div>
 
