@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Shield, RefreshCw, AlertTriangle, CheckCircle2, Info, ArrowRight } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Shield, RefreshCw, AlertTriangle, CheckCircle2, Info, Loader2 } from 'lucide-react';
 
 interface Chunk {
   id: string;
@@ -22,93 +22,82 @@ interface Analysis {
   references: Reference[];
 }
 
-const generateAnalysis = (text: string): Analysis => {
-  // Split by sentence endings, keeping the punctuation attached to the sentence
-  const sentenceRegex = /[^.!?]+[.!?]+[\])'"`’”]*\s*|.+/g;
-  const matches = text.match(sentenceRegex) || [];
-  
-  const chunks = matches.map((sentence, i) => ({
-    id: `chunk-${i}`,
-    text: sentence
-  }));
-
-  const references: Reference[] = [];
-  let score = 7; // Base score
-
-  if (chunks.length > 0) {
-    // Generate deterministic but dynamic-feeling mock references based on the text
-    const textLength = text.length;
-    
-    // Reference 1: Often targets the beginning
-    references.push({
-      id: 'ref-1',
-      chunkIds: [chunks[0].id],
-      title: "Unverified Claim",
-      explanation: "This opening statement presents a factual claim without a verifiable source or clear context.",
-      type: 'warning'
-    });
-    score -= 1;
-
-    // Reference 2: If there's enough text, target the middle
-    if (chunks.length > 2) {
-      const midIndex = Math.floor(chunks.length / 2);
-      references.push({
-        id: 'ref-2',
-        chunkIds: [chunks[midIndex].id],
-        title: "Strong Corroboration",
-        explanation: "This point is generally accepted and aligns well with established consensus and available records.",
-        type: 'positive'
-      });
-      score += 2;
-    }
-    
-    // Reference 3: Target the end or specific punctuation if available
-    if (chunks.length > 4) {
-      references.push({
-        id: 'ref-3',
-        chunkIds: [chunks[chunks.length - 1].id],
-        title: "Subjective Framing",
-        explanation: "The phrasing here relies on subjective interpretation rather than objective, measurable metrics.",
-        type: 'neutral'
-      });
-      score -= 1;
-    }
-  }
-
-  const finalScore = Math.min(Math.max(score, 1), 10);
-
-  return {
-    overallScore: finalScore,
-    summary: finalScore >= 8 
-      ? "Overall, this text appears to be highly credible. Most statements align with established facts, though minor points may lack direct citations."
-      : finalScore >= 5
-      ? "This text has mixed credibility. While it contains factual elements, several claims are unsupported or rely heavily on subjective language."
-      : "The credibility of this text is questionable. Multiple statements are unverified, lack sources, or contradict established consensus.",
-    chunks,
-    references
-  };
-};
-
 export default function App() {
   const [inputText, setInputText] = useState("");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [activeRefId, setActiveRefId] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const chunkRefs = useRef<Record<string, HTMLSpanElement | null>>({});
 
   const handlePasteOrChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputText(e.target.value);
-    if (e.target.value.trim().length > 0) {
-      setAnalysis(generateAnalysis(e.target.value));
-    } else {
-      setAnalysis(null);
-    }
   };
+
+  useEffect(() => {
+    const text = inputText.trim();
+
+    if (!text) {
+      setAnalysis(null);
+      setError(null);
+      setIsAnalyzing(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const timeoutId = window.setTimeout(async () => {
+      setIsAnalyzing(true);
+      setError(null);
+
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text }),
+          signal: controller.signal,
+        });
+
+        const responseText = await response.text();
+        const data = responseText ? JSON.parse(responseText) : null;
+
+        if (!response.ok) {
+          throw new Error(data?.error || 'Backend did not return a valid analysis response.');
+        }
+
+        if (!data) {
+          throw new Error('Backend returned an empty response.');
+        }
+
+        setAnalysis(data);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+
+        setAnalysis(null);
+        setError(err instanceof Error ? err.message : 'Unable to analyze text.');
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsAnalyzing(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [inputText]);
 
   const reset = () => {
     setInputText("");
     setAnalysis(null);
     setActiveRefId(null);
+    setError(null);
   };
 
   const handleReferenceClick = (refId: string) => {
@@ -167,6 +156,18 @@ export default function App() {
                 onChange={handlePasteOrChange}
                 autoFocus
               />
+              {isAnalyzing && (
+                <div className="mt-4 flex items-center gap-2 text-sm text-gray-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Analyzing
+                </div>
+              )}
+              {error && (
+                <div className="mt-4 flex items-center gap-2 text-sm text-rose-600">
+                  <AlertTriangle className="w-4 h-4" />
+                  {error}
+                </div>
+              )}
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
