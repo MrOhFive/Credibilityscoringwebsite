@@ -213,9 +213,9 @@ export default function App() {
                     <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Overall Score</div>
                     <div className="flex items-baseline gap-2">
                       <span className={`text-6xl font-black tracking-tighter ${
-                        analysis.overallScore >= 8 ? 'text-emerald-600' :
-                        analysis.overallScore >= 5 ? 'text-amber-500' : 'text-rose-600'
-                      }`}>
+                        analysis.overallScore >= 80 ? 'text-emerald-600' :
+                        analysis.overallScore >= 50 ? 'text-amber-500' : 'text-rose-600'
+                        }`}>
                         {analysis.overallScore}
                       </span>
                       <span className="text-2xl font-medium text-gray-300">/ 100</span>
