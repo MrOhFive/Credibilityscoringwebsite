@@ -71,6 +71,15 @@ const server = createServer(async (req, res) => {
   sendJson(res, 404, { error: 'Not found.' });
 });
 
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Stop the existing backend or set PORT to another value.`);
+    process.exit(1);
+  }
+
+  throw error;
+});
+
 server.listen(PORT, () => {
   console.log(`Backend API running at http://localhost:${PORT}`);
 });
