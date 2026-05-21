@@ -1,8 +1,50 @@
 import { createServer } from 'node:http';
-import { analyzeText } from './credibilityScorer.js';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { analyzeText, generateExplanation } from './credibilityScorer.js';
+
+loadLocalEnv();
 
 const PORT = Number(process.env.PORT || 3001);
 const MAX_BODY_SIZE = 1_000_000;
+
+function loadLocalEnv() {
+  const envPath = resolve(process.cwd(), '.env');
+
+  if (!existsSync(envPath)) {
+    return;
+  }
+
+  const lines = readFileSync(envPath, 'utf8').split(/\r?\n/);
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    const separatorIndex = trimmed.indexOf('=');
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    let value = trimmed.slice(separatorIndex + 1).trim();
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    if (key && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
 
 function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
@@ -60,7 +102,13 @@ const server = createServer(async (req, res) => {
         return;
       }
 
-      sendJson(res, 200, analyzeText(text));
+      const analysis = analyzeText(text);
+      const explanation = await generateExplanation(text, analysis);
+
+      sendJson(res, 200, {
+        ...analysis,
+        explanation,
+      });
     } catch (error) {
       sendJson(res, 400, { error: error.message || 'Unable to analyze text.' });
     }

@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Info,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 
 interface Chunk {
@@ -37,6 +38,13 @@ interface Analysis {
   };
 
   summary: string;
+
+  explanation?: {
+    text: string;
+    source: 'llm' | 'local';
+    model?: string;
+    error?: string;
+  };
 
   chunks: Chunk[];
 
@@ -391,6 +399,47 @@ export default function App() {
                       {analysis.summary}
                     </p>
                   </div>
+
+                  {analysis.explanation && (
+                    <div
+                      className={`mb-10 rounded-2xl border p-4 ${
+                        darkMode
+                          ? 'bg-[#23262F] border-gray-700'
+                          : 'bg-gray-50 border-gray-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles
+                          className={`w-4 h-4 ${
+                            analysis.explanation.source === 'llm'
+                              ? 'text-emerald-500'
+                              : 'text-amber-500'
+                          }`}
+                        />
+
+                        <div className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                          Response Explanation
+                        </div>
+                      </div>
+
+                      <p
+                        className={`text-sm leading-relaxed ${
+                          darkMode
+                            ? 'text-gray-300'
+                            : 'text-gray-600'
+                        }`}
+                      >
+                        {analysis.explanation.text}
+                      </p>
+
+                      {analysis.explanation.source === 'local' && (
+                        <p className="mt-3 text-xs leading-relaxed text-amber-500">
+                          {analysis.explanation.error ||
+                            'Set OPENAI_API_KEY to generate this explanation with an LLM.'}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Category Breakdown */}
                   <div className="mb-10">

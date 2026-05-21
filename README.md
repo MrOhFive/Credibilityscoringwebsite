@@ -7,6 +7,8 @@
 
   Run `npm i` to install the dependencies.
 
+  To enable LLM-generated explanations, set `OPENAI_API_KEY` before starting the server. You can optionally set `OPENAI_MODEL`; otherwise the backend uses `gpt-5.4-mini`.
+
   Run `npm run dev` to start the frontend and backend development servers together.
 
   The frontend runs with Vite, usually at `http://localhost:5173`.
