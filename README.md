@@ -44,5 +44,5 @@
 
   Docker Hub image link format:
 
-  `https://hub.docker.com/r/YOUR_DOCKERHUB_USERNAME/credibility-scoring-website`
+  `https://hub.docker.com/r/aidenh0/credibility-scoring-website`
   
