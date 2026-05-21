@@ -22,4 +22,27 @@
 
   - `npm run dev:client`
   - `npm run dev:server`
+
+  ## Docker
+
+  Build and run the application locally:
+
+  ```sh
+  docker build -t credibility-scoring-website .
+  docker run --rm -p 3001:3001 --env OPENAI_API_KEY="$OPENAI_API_KEY" credibility-scoring-website
+  ```
+
+  Then open `http://localhost:3001`.
+
+  Publish to Docker Hub:
+
+  ```sh
+  docker login
+  docker build -t YOUR_DOCKERHUB_USERNAME/credibility-scoring-website:latest .
+  docker push YOUR_DOCKERHUB_USERNAME/credibility-scoring-website:latest
+  ```
+
+  Docker Hub image link format:
+
+  `https://hub.docker.com/r/YOUR_DOCKERHUB_USERNAME/credibility-scoring-website`
   

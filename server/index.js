@@ -1,12 +1,24 @@
 import { createServer } from 'node:http';
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
+import { extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { analyzeText, generateExplanation } from './credibilityScorer.js';
 
 loadLocalEnv();
 
 const PORT = Number(process.env.PORT || 3001);
 const MAX_BODY_SIZE = 1_000_000;
+const DIST_DIR = resolve(process.cwd(), 'dist');
+const MIME_TYPES = {
+  '.css': 'text/css; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.ico': 'image/x-icon',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.webp': 'image/webp',
+};
 
 function loadLocalEnv() {
   const envPath = resolve(process.cwd(), '.env');
@@ -54,6 +66,58 @@ function sendJson(res, statusCode, data) {
     'Access-Control-Allow-Headers': 'Content-Type',
   });
   res.end(JSON.stringify(data));
+}
+
+function sendStaticFile(req, res) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    sendJson(res, 405, { error: 'Method not allowed.' });
+    return;
+  }
+
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  let pathname = '';
+
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    sendJson(res, 400, { error: 'Bad request.' });
+    return;
+  }
+
+  if (pathname.includes('\0')) {
+    sendJson(res, 400, { error: 'Bad request.' });
+    return;
+  }
+
+  if (pathname === '/') {
+    pathname = '/index.html';
+  }
+
+  const requestedPath = resolve(DIST_DIR, `.${pathname}`);
+  const relativePath = relative(DIST_DIR, requestedPath);
+  const filePath =
+    relativePath && !relativePath.startsWith('..') && !isAbsolute(relativePath)
+      ? requestedPath
+      : join(DIST_DIR, 'index.html');
+  const fallbackPath = join(DIST_DIR, 'index.html');
+  const staticPath =
+    existsSync(filePath) && statSync(filePath).isFile() ? filePath : fallbackPath;
+
+  if (!existsSync(staticPath)) {
+    sendJson(res, 404, { error: 'Build output not found. Run npm run build first.' });
+    return;
+  }
+
+  res.writeHead(200, {
+    'Content-Type': MIME_TYPES[extname(staticPath)] || 'application/octet-stream',
+  });
+
+  if (req.method === 'HEAD') {
+    res.end();
+    return;
+  }
+
+  createReadStream(staticPath).pipe(res);
 }
 
 function readJsonBody(req) {
@@ -116,7 +180,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  sendJson(res, 404, { error: 'Not found.' });
+  sendStaticFile(req, res);
 });
 
 server.on('error', (error) => {
