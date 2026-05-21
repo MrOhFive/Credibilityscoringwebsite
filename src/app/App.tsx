@@ -12,6 +12,9 @@ import {
 interface Chunk {
   id: string;
   text: string;
+  flagged?: boolean;
+  reason?: string;
+  highlightType?: 'positive' | 'warning' | 'neutral';
 }
 
 interface Reference {
@@ -243,6 +246,7 @@ export default function App() {
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
+
               {/* Left Column */}
               <motion.div
                 initial={{ opacity: 0 }}
@@ -251,6 +255,27 @@ export default function App() {
                   darkMode ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
+
+                {/* Legend */}
+                <div className="flex flex-wrap gap-3 mb-8 text-xs font-medium">
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-rose-500"></div>
+                    <span>Sensationalized Language</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                    <span>Subjective Language</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                    <span>Supporting Evidence</span>
+                  </div>
+
+                </div>
+
                 {analysis.chunks.map((chunk) => {
                   const isActive = activeChunkIds.includes(chunk.id);
 
@@ -263,9 +288,21 @@ export default function App() {
                       ref={(el) =>
                         (chunkRefs.current[chunk.id] = el)
                       }
-                      className={`transition-all duration-500 rounded-sm ${
+                      className={`transition-all duration-500 rounded-sm px-1 py-0.5 ${
                         isActive
-                          ? 'bg-gray-900 text-white px-1 py-0.5 mx-0.5'
+                          ? 'bg-gray-900 text-white mx-0.5'
+                          : chunk.highlightType === 'warning'
+                          ? darkMode
+                            ? 'bg-rose-900/40 text-rose-200'
+                            : 'bg-rose-100 text-rose-800'
+                          : chunk.highlightType === 'neutral'
+                          ? darkMode
+                            ? 'bg-amber-900/30 text-amber-200'
+                            : 'bg-amber-100 text-amber-800'
+                          : chunk.highlightType === 'positive'
+                          ? darkMode
+                            ? 'bg-emerald-900/30 text-emerald-200'
+                            : 'bg-emerald-100 text-emerald-800'
                           : isFaded
                           ? 'opacity-30'
                           : ''
@@ -291,47 +328,54 @@ export default function App() {
                       : 'bg-white border border-gray-100'
                   }`}
                 >
+
                   {/* Overall Score */}
                   <div className="mb-8">
+
                     <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                       Overall Score
                     </div>
 
                     <div className="flex items-baseline gap-2">
-                      <span
-                        className={`text-6xl font-black tracking-tighter ${
-                          analysis.overallScore >= 80
-                            ? 'text-emerald-600'
-                            : analysis.overallScore >= 50
-                            ? 'text-amber-500'
-                            : 'text-rose-600'
-                        }`}
-                      >
-                        {analysis.overallScore}
+
+                      <div>
+                        <span
+                          className={`text-6xl font-black tracking-tighter ${
+                            analysis.overallScore >= 80
+                              ? 'text-emerald-600'
+                              : analysis.overallScore >= 50
+                              ? 'text-amber-500'
+                              : 'text-rose-600'
+                          }`}
+                        >
+                          {analysis.overallScore}
+                        </span>
+
                         <div
-                        className={`text-sm font-semibold uppercase tracking-wider mt-2 ${
-    analysis.overallScore >= 80
-      ? 'text-emerald-500'
-      : analysis.overallScore >= 50
-      ? 'text-amber-500'
-      : 'text-rose-500'
-  }`}
->
-  {analysis.overallScore >= 85
-    ? 'Highly Credible'
-    : analysis.overallScore >= 70
-    ? 'Mostly Credible'
-    : analysis.overallScore >= 50
-    ? 'Mixed Credibility'
-    : analysis.overallScore >= 30
-    ? 'Low Credibility'
-    : 'Highly Questionable'}
-</div>
-                      </span>
+                          className={`text-sm font-semibold uppercase tracking-wider mt-2 ${
+                            analysis.overallScore >= 80
+                              ? 'text-emerald-500'
+                              : analysis.overallScore >= 50
+                              ? 'text-amber-500'
+                              : 'text-rose-500'
+                          }`}
+                        >
+                          {analysis.overallScore >= 85
+                            ? 'Highly Credible'
+                            : analysis.overallScore >= 70
+                            ? 'Mostly Credible'
+                            : analysis.overallScore >= 50
+                            ? 'Mixed Credibility'
+                            : analysis.overallScore >= 30
+                            ? 'Low Credibility'
+                            : 'Highly Questionable'}
+                        </div>
+                      </div>
 
                       <span className="text-2xl font-medium text-gray-300">
                         / 100
                       </span>
+
                     </div>
                   </div>
 
@@ -423,6 +467,7 @@ export default function App() {
                             }`}
                           >
                             <div className="flex items-start gap-3">
+
                               <div
                                 className={`mt-0.5 flex-shrink-0 ${
                                   isActive
@@ -458,12 +503,14 @@ export default function App() {
                                   {ref.explanation}
                                 </p>
                               </div>
+
                             </div>
                           </div>
                         );
                       })}
                     </div>
                   </div>
+
                 </div>
               </motion.div>
             </div>

@@ -74,12 +74,37 @@ export function analyzeText(text) {
       }
     });
 
-    return {
-      id: `chunk-${i}`,
-      text: sentence.trim(),
-      flagged,
-      reason,
-    };
+    let highlightType = "";
+
+clickbaitWords.forEach((word) => {
+  if (lowerSentence.includes(word)) {
+    highlightType = "warning";
+  }
+});
+
+emotionalWords.forEach((word) => {
+  if (lowerSentence.includes(word)) {
+    if (!highlightType) {
+      highlightType = "neutral";
+    }
+  }
+});
+
+citationPatterns.forEach((word) => {
+  if (lowerSentence.includes(word)) {
+    if (!highlightType) {
+      highlightType = "positive";
+    }
+  }
+});
+
+return {
+  id: `chunk-${i}`,
+  text: sentence.trim(),
+  flagged,
+  reason,
+  highlightType,
+};
   });
 
   const references = [];
