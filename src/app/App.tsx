@@ -59,7 +59,19 @@ export default function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const chunkRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+const chunkRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+const analyzerRef = useRef<HTMLDivElement | null>(null);
+const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+const scrollToAnalyzer = () => {
+  analyzerRef.current?.scrollIntoView({
+    behavior: 'smooth',
+  });
+
+  setTimeout(() => {
+    textareaRef.current?.focus();
+  }, 500);
+};
 
   const handlePasteOrChange = (
     e: React.ChangeEvent<HTMLTextAreaElement>
@@ -180,78 +192,188 @@ export default function App() {
         }`}
       >
         {/* Header */}
-        <header className="mb-12 flex justify-between items-center opacity-80 w-full">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
+<header className="mb-12 flex justify-between items-center opacity-90 w-full sticky top-0 z-50 backdrop-blur-sm">
 
-            <h1 className="text-sm font-semibold tracking-widest uppercase">
-              CredCheck
-            </h1>
-          </div>
+  <div className="flex items-center gap-2">
+    <Shield className="w-5 h-5" />
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className={`text-xs font-medium uppercase tracking-wider px-4 py-2 rounded-full transition-colors ${
-                darkMode
-                  ? 'bg-gray-800 hover:bg-gray-700 text-white'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-              }`}
-            >
-              {darkMode ? 'Light Mode' : 'Dark Mode'}
-            </button>
+    <h1 className="text-sm font-semibold tracking-widest uppercase">
+      CredCheck
+    </h1>
+  </div>
 
-            {analysis && (
-              <button
-                onClick={reset}
-                className={`text-xs font-medium uppercase tracking-wider flex items-center gap-2 px-4 py-2 rounded-full transition-colors ${
-                  darkMode
-                    ? 'bg-gray-800 hover:bg-gray-700 text-white'
-                    : 'hover:bg-gray-100 text-gray-900'
-                }`}
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
+  <div className="flex items-center gap-6 text-xs uppercase tracking-widest font-semibold">
 
-                Analyze New
-              </button>
-            )}
-          </div>
-        </header>
+<button
+  onClick={() => {
+    reset();
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 300);
+  }}
+  className="hover:opacity-60 transition-opacity"
+>
+  Analyze New
+</button>
+
+    <a
+      href="https://github.com/MrOhFive/Credibilityscoringwebsite"
+      target="_blank"
+      className="hover:opacity-60 transition-opacity"
+    >
+      GitHub
+    </a>
+
+    <button
+      onClick={() => setDarkMode(!darkMode)}
+      className={`px-4 py-2 rounded-full transition-colors ${
+        darkMode
+          ? 'bg-gray-800 hover:bg-gray-700 text-white'
+          : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+      }`}
+    >
+      {darkMode ? 'Light' : 'Dark'}
+    </button>
+
+  </div>
+</header>
 
         {/* Main Content */}
         <main>
           {!analysis ? (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative"
-            >
-              <textarea
-                className={`w-full h-[60vh] bg-transparent border-0 focus:ring-0 text-3xl sm:text-4xl leading-relaxed font-light resize-none outline-none transition-colors duration-500 ${
-                  darkMode
-                    ? 'placeholder:text-gray-600 text-white'
-                    : 'placeholder:text-gray-300 text-gray-900'
-                }`}
-                placeholder="Paste your text here to generate a credibility report..."
-                value={inputText}
-                onChange={handlePasteOrChange}
-                autoFocus
-              />
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="flex flex-col items-center text-center"
+  >
 
-              {isAnalyzing && (
-                <div className="mt-4 flex items-center gap-2 text-sm text-gray-400">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Analyzing
-                </div>
-              )}
+    {/* Hero */}
+    <div className="max-w-4xl mx-auto mb-20 mt-10">
 
-              {error && (
-                <div className="mt-4 flex items-center gap-2 text-sm text-rose-600">
-                  <AlertTriangle className="w-4 h-4" />
-                  {error}
-                </div>
-              )}
-            </motion.div>
+      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 mb-6 text-xs uppercase tracking-widest font-semibold opacity-80">
+        AI-Assisted Credibility Analysis
+      </div>
+
+      <h1 className={`text-6xl sm:text-7xl font-black tracking-tight leading-none mb-6 ${
+        darkMode ? 'text-white' : 'text-black'
+      }`}>
+        Analyze credibility instantly.
+      </h1>
+
+      <p className={`text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-10 ${
+        darkMode ? 'text-gray-400' : 'text-gray-600'
+      }`}>
+        Detect sensationalized language, emotional framing,
+        supporting evidence, and credibility indicators using
+        AI-assisted analysis.
+      </p>
+
+      <button
+        onClick={scrollToAnalyzer}
+        className="px-8 py-4 rounded-2xl bg-black text-white text-sm uppercase tracking-widest font-semibold hover:scale-[1.02] transition-transform"
+      >
+        Try the Analyzer
+      </button>
+
+    </div>
+
+    {/* Analyzer */}
+    <div
+      ref={analyzerRef}
+      className={`w-full max-w-4xl rounded-3xl border shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-colors duration-500 ${
+        darkMode
+          ? 'bg-[#181A20] border-gray-800'
+          : 'bg-white border-gray-100'
+      }`}
+    >
+
+      <textarea
+       ref={textareaRef}
+        className={`w-full h-[350px] bg-transparent border-0 focus:ring-0 text-xl leading-relaxed font-light resize-none outline-none p-8 transition-colors duration-500 ${
+          darkMode
+            ? 'placeholder:text-gray-600 text-white'
+            : 'placeholder:text-gray-300 text-gray-900'
+        }`}
+        placeholder="Paste article, essay, or online content here..."
+        value={inputText}
+        onChange={handlePasteOrChange}
+        autoFocus
+      />
+
+      <div className={`flex justify-between items-center px-8 py-5 border-t ${
+        darkMode
+          ? 'border-gray-800'
+          : 'border-gray-100'
+      }`}>
+
+        <div className="text-xs uppercase tracking-widest opacity-50 font-semibold">
+          AI Credibility Detection
+        </div>
+
+        {isAnalyzing && (
+          <div className="flex items-center gap-2 text-sm opacity-70">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Analyzing
+          </div>
+        )}
+
+      </div>
+    </div>
+
+    {/* Features */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-20 w-full max-w-6xl">
+
+      <div className={`rounded-3xl p-8 border transition-colors duration-500 ${
+        darkMode
+          ? 'bg-[#181A20] border-gray-800'
+          : 'bg-white border-gray-100'
+      }`}>
+        <div className="text-lg font-bold mb-3">
+          Credibility Detection
+        </div>
+
+        <p className="text-sm opacity-70 leading-relaxed">
+          Analyze supporting evidence, citations, and transparency indicators.
+        </p>
+      </div>
+
+      <div className={`rounded-3xl p-8 border transition-colors duration-500 ${
+        darkMode
+          ? 'bg-[#181A20] border-gray-800'
+          : 'bg-white border-gray-100'
+      }`}>
+        <div className="text-lg font-bold mb-3">
+          Sensationalism Analysis
+        </div>
+
+        <p className="text-sm opacity-70 leading-relaxed">
+          Detect emotional framing, clickbait wording, and manipulative language.
+        </p>
+      </div>
+
+      <div className={`rounded-3xl p-8 border transition-colors duration-500 ${
+        darkMode
+          ? 'bg-[#181A20] border-gray-800'
+          : 'bg-white border-gray-100'
+      }`}>
+        <div className="text-lg font-bold mb-3">
+          Explainable Scoring
+        </div>
+
+        <p className="text-sm opacity-70 leading-relaxed">
+          Understand exactly why content gained or lost credibility points.
+        </p>
+      </div>
+
+    </div>
+
+  </motion.div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
 
