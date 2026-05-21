@@ -308,6 +308,25 @@ export default function App() {
                         }`}
                       >
                         {analysis.overallScore}
+                        <div
+                        className={`text-sm font-semibold uppercase tracking-wider mt-2 ${
+    analysis.overallScore >= 80
+      ? 'text-emerald-500'
+      : analysis.overallScore >= 50
+      ? 'text-amber-500'
+      : 'text-rose-500'
+  }`}
+>
+  {analysis.overallScore >= 85
+    ? 'Highly Credible'
+    : analysis.overallScore >= 70
+    ? 'Mostly Credible'
+    : analysis.overallScore >= 50
+    ? 'Mixed Credibility'
+    : analysis.overallScore >= 30
+    ? 'Low Credibility'
+    : 'Highly Questionable'}
+</div>
                       </span>
 
                       <span className="text-2xl font-medium text-gray-300">
