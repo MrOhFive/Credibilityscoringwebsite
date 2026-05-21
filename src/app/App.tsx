@@ -1,6 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Shield, RefreshCw, AlertTriangle, CheckCircle2, Info, Loader2 } from 'lucide-react';
+import {
+  Shield,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  Loader2,
+} from 'lucide-react';
 
 interface Chunk {
   id: string;
@@ -34,15 +41,18 @@ interface Analysis {
 }
 
 export default function App() {
-  const [inputText, setInputText] = useState("");
+  const [darkMode, setDarkMode] = useState(false);
+  const [inputText, setInputText] = useState('');
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [activeRefId, setActiveRefId] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const chunkRefs = useRef<Record<string, HTMLSpanElement | null>>({});
 
-  const handlePasteOrChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handlePasteOrChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
     setInputText(e.target.value);
   };
 
@@ -76,7 +86,10 @@ export default function App() {
         const data = responseText ? JSON.parse(responseText) : null;
 
         if (!response.ok) {
-          throw new Error(data?.error || 'Backend did not return a valid analysis response.');
+          throw new Error(
+            data?.error ||
+              'Backend did not return a valid analysis response.'
+          );
         }
 
         if (!data) {
@@ -90,7 +103,12 @@ export default function App() {
         }
 
         setAnalysis(null);
-        setError(err instanceof Error ? err.message : 'Unable to analyze text.');
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Unable to analyze text.'
+        );
       } finally {
         if (!controller.signal.aborted) {
           setIsAnalyzing(false);
@@ -105,7 +123,7 @@ export default function App() {
   }, [inputText]);
 
   const reset = () => {
-    setInputText("");
+    setInputText('');
     setAnalysis(null);
     setActiveRefId(null);
     setError(null);
@@ -113,66 +131,109 @@ export default function App() {
 
   const handleReferenceClick = (refId: string) => {
     if (activeRefId === refId) {
-      setActiveRefId(null); // Toggle off
+      setActiveRefId(null);
     } else {
       setActiveRefId(refId);
-      
-      // Scroll the first active chunk into view
-      const ref = analysis?.references.find(r => r.id === refId);
+
+      const ref = analysis?.references.find((r) => r.id === refId);
+
       if (ref && ref.chunkIds.length > 0) {
         const firstChunkId = ref.chunkIds[0];
         const element = chunkRefs.current[firstChunkId];
+
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
         }
       }
     }
   };
 
-  const activeChunkIds = analysis?.references.find(r => r.id === activeRefId)?.chunkIds || [];
+  const activeChunkIds =
+    analysis?.references.find((r) => r.id === activeRefId)
+      ?.chunkIds || [];
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans selection:bg-gray-200 py-12 px-6 sm:px-12 flex flex-col items-center">
-      <div className={`w-full transition-all duration-700 ease-in-out ${analysis ? 'max-w-6xl' : 'max-w-3xl mt-20'}`}>
-        
+    <div
+      className={`min-h-screen font-sans selection:bg-gray-200 py-12 px-6 sm:px-12 flex flex-col items-center transition-colors duration-500 ${
+        darkMode
+          ? 'bg-[#0F1115] text-white'
+          : 'bg-[#FDFDFD] text-gray-900'
+      }`}
+    >
+      <div
+        className={`w-full transition-all duration-700 ease-in-out ${
+          analysis ? 'max-w-6xl' : 'max-w-3xl mt-20'
+        }`}
+      >
         {/* Header */}
-        <header className="mb-12 flex justify-between items-center opacity-80">
+        <header className="mb-12 flex justify-between items-center opacity-80 w-full">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5" />
-            <h1 className="text-sm font-semibold tracking-widest uppercase">CredCheck</h1>
+
+            <h1 className="text-sm font-semibold tracking-widest uppercase">
+              CredCheck
+            </h1>
           </div>
-          {analysis && (
-            <button 
-              onClick={reset}
-              className="text-xs font-medium uppercase tracking-wider flex items-center gap-2 hover:bg-gray-100 px-4 py-2 rounded-full transition-colors"
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`text-xs font-medium uppercase tracking-wider px-4 py-2 rounded-full transition-colors ${
+                darkMode
+                  ? 'bg-gray-800 hover:bg-gray-700 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+              }`}
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Analyze New
+              {darkMode ? 'Light Mode' : 'Dark Mode'}
             </button>
-          )}
+
+            {analysis && (
+              <button
+                onClick={reset}
+                className={`text-xs font-medium uppercase tracking-wider flex items-center gap-2 px-4 py-2 rounded-full transition-colors ${
+                  darkMode
+                    ? 'bg-gray-800 hover:bg-gray-700 text-white'
+                    : 'hover:bg-gray-100 text-gray-900'
+                }`}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+
+                Analyze New
+              </button>
+            )}
+          </div>
         </header>
 
-        {/* Main Content Area */}
+        {/* Main Content */}
         <main>
           {!analysis ? (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="relative"
             >
               <textarea
-                className="w-full h-[60vh] bg-transparent border-0 focus:ring-0 text-3xl sm:text-4xl leading-relaxed font-light resize-none placeholder:text-gray-300 outline-none"
+                className={`w-full h-[60vh] bg-transparent border-0 focus:ring-0 text-3xl sm:text-4xl leading-relaxed font-light resize-none outline-none transition-colors duration-500 ${
+                  darkMode
+                    ? 'placeholder:text-gray-600 text-white'
+                    : 'placeholder:text-gray-300 text-gray-900'
+                }`}
                 placeholder="Paste your text here to generate a credibility report..."
                 value={inputText}
                 onChange={handlePasteOrChange}
                 autoFocus
               />
+
               {isAnalyzing && (
                 <div className="mt-4 flex items-center gap-2 text-sm text-gray-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Analyzing
                 </div>
               )}
+
               {error && (
                 <div className="mt-4 flex items-center gap-2 text-sm text-rose-600">
                   <AlertTriangle className="w-4 h-4" />
@@ -182,27 +243,32 @@ export default function App() {
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
-              
-              {/* Left Column: Text Content */}
-              <motion.div 
+              {/* Left Column */}
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="lg:col-span-7 xl:col-span-8 text-xl sm:text-2xl leading-relaxed font-light text-gray-700"
+                className={`lg:col-span-7 xl:col-span-8 text-xl sm:text-2xl leading-relaxed font-light transition-colors duration-500 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}
               >
                 {analysis.chunks.map((chunk) => {
                   const isActive = activeChunkIds.includes(chunk.id);
-                  const isFaded = activeRefId !== null && !isActive;
-                  
+
+                  const isFaded =
+                    activeRefId !== null && !isActive;
+
                   return (
                     <span
                       key={chunk.id}
-                      ref={(el) => chunkRefs.current[chunk.id] = el}
+                      ref={(el) =>
+                        (chunkRefs.current[chunk.id] = el)
+                      }
                       className={`transition-all duration-500 rounded-sm ${
-                        isActive 
-                          ? 'bg-gray-900 text-white px-1 py-0.5 mx-0.5' 
-                          : isFaded 
-                            ? 'opacity-30' 
-                            : ''
+                        isActive
+                          ? 'bg-gray-900 text-white px-1 py-0.5 mx-0.5'
+                          : isFaded
+                          ? 'opacity-30'
+                          : ''
                       }`}
                     >
                       {chunk.text}
@@ -211,96 +277,165 @@ export default function App() {
                 })}
               </motion.div>
 
-              {/* Right Column: Report Sidebar */}
-              <motion.div 
+              {/* Sidebar */}
+              <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
                 className="lg:col-span-5 xl:col-span-4 sticky top-12"
               >
-                <div className="bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl p-8">
+                <div
+                  className={`shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl p-8 transition-colors duration-500 ${
+                    darkMode
+                      ? 'bg-[#181A20] border border-gray-800'
+                      : 'bg-white border border-gray-100'
+                  }`}
+                >
                   {/* Overall Score */}
                   <div className="mb-8">
-                    <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Overall Score</div>
+                    <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
+                      Overall Score
+                    </div>
+
                     <div className="flex items-baseline gap-2">
-                      <span className={`text-6xl font-black tracking-tighter ${
-                        analysis.overallScore >= 80 ? 'text-emerald-600' :
-                        analysis.overallScore >= 50 ? 'text-amber-500' : 'text-rose-600'
-                        }`}>
+                      <span
+                        className={`text-6xl font-black tracking-tighter ${
+                          analysis.overallScore >= 80
+                            ? 'text-emerald-600'
+                            : analysis.overallScore >= 50
+                            ? 'text-amber-500'
+                            : 'text-rose-600'
+                        }`}
+                      >
                         {analysis.overallScore}
                       </span>
-                      <span className="text-2xl font-medium text-gray-300">/ 100</span>
+
+                      <span className="text-2xl font-medium text-gray-300">
+                        / 100
+                      </span>
                     </div>
                   </div>
 
                   {/* Summary */}
                   <div className="mb-10">
-                    <p className="text-sm leading-relaxed text-gray-600">
+                    <p
+                      className={`text-sm leading-relaxed ${
+                        darkMode
+                          ? 'text-gray-300'
+                          : 'text-gray-600'
+                      }`}
+                    >
                       {analysis.summary}
                     </p>
                   </div>
 
                   {/* Category Breakdown */}
-<div className="mb-10">
-  <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">
-    Category Breakdown
-  </div>
+                  <div className="mb-10">
+                    <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">
+                      Category Breakdown
+                    </div>
 
-  <div className="space-y-4">
-    {Object.entries(analysis.categoryScores).map(([key, value]) => (
-      <div key={key}>
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-sm font-medium capitalize text-gray-700">
-            {key.replace(/([A-Z])/g, ' $1')}
-          </span>
+                    <div className="space-y-4">
+                      {Object.entries(
+                        analysis.categoryScores
+                      ).map(([key, value]) => (
+                        <div key={key}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span
+                              className={`text-sm font-medium capitalize ${
+                                darkMode
+                                  ? 'text-gray-200'
+                                  : 'text-gray-700'
+                              }`}
+                            >
+                              {key.replace(
+                                /([A-Z])/g,
+                                ' $1'
+                              )}
+                            </span>
 
-          <span className="text-xs font-semibold text-gray-500">
-            {value}/10
-          </span>
-        </div>
+                            <span className="text-xs font-semibold text-gray-500">
+                              {value}/10
+                            </span>
+                          </div>
 
-        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-          <div
-            className={`h-2 rounded-full transition-all duration-700 ${
-              value >= 8
-                ? 'bg-emerald-500'
-                : value >= 5
-                ? 'bg-amber-500'
-                : 'bg-rose-500'
-            }`}
-            style={{ width: `${value * 10}%` }}
-          />
-        </div>
-      </div>
-    ))}
-  </div>
-</div>
-                  {/* References List */}
+                          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div
+                              className={`h-2 rounded-full transition-all duration-700 ${
+                                value >= 8
+                                  ? 'bg-emerald-500'
+                                  : value >= 5
+                                  ? 'bg-amber-500'
+                                  : 'bg-rose-500'
+                              }`}
+                              style={{
+                                width: `${value * 10}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* References */}
                   <div>
-                    <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Specific Points</div>
+                    <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">
+                      Specific Points
+                    </div>
+
                     <div className="space-y-3">
                       {analysis.references.map((ref) => {
-                        const isActive = activeRefId === ref.id;
-                        
+                        const isActive =
+                          activeRefId === ref.id;
+
                         return (
-                          <div 
+                          <div
                             key={ref.id}
-                            onClick={() => handleReferenceClick(ref.id)}
+                            onClick={() =>
+                              handleReferenceClick(ref.id)
+                            }
                             className={`p-4 rounded-2xl cursor-pointer transition-all border ${
-                              isActive 
-                                ? 'bg-gray-900 border-gray-900 text-white shadow-lg' 
+                              isActive
+                                ? 'bg-gray-900 border-gray-900 text-white shadow-lg'
+                                : darkMode
+                                ? 'bg-[#23262F] border-gray-700 hover:bg-[#2A2E38] text-white'
                                 : 'bg-gray-50 border-gray-100 hover:bg-gray-100 text-gray-800'
                             }`}
                           >
                             <div className="flex items-start gap-3">
-                              <div className={`mt-0.5 flex-shrink-0 ${isActive ? 'text-white' : getIconColor(ref.type)}`}>
+                              <div
+                                className={`mt-0.5 flex-shrink-0 ${
+                                  isActive
+                                    ? 'text-white'
+                                    : getIconColor(ref.type)
+                                }`}
+                              >
                                 {getIcon(ref.type)}
                               </div>
+
                               <div>
-                                <h3 className={`font-semibold text-sm mb-1 ${isActive ? 'text-white' : 'text-gray-900'}`}>
+                                <h3
+                                  className={`font-semibold text-sm mb-1 ${
+                                    isActive
+                                      ? 'text-white'
+                                      : darkMode
+                                      ? 'text-gray-100'
+                                      : 'text-gray-900'
+                                  }`}
+                                >
                                   {ref.title}
                                 </h3>
-                                <p className={`text-xs leading-relaxed ${isActive ? 'text-gray-300' : 'text-gray-500'}`}>
+
+                                <p
+                                  className={`text-xs leading-relaxed ${
+                                    isActive
+                                      ? 'text-gray-300'
+                                      : darkMode
+                                      ? 'text-gray-400'
+                                      : 'text-gray-500'
+                                  }`}
+                                >
                                   {ref.explanation}
                                 </p>
                               </div>
@@ -310,7 +445,6 @@ export default function App() {
                       })}
                     </div>
                   </div>
-                  
                 </div>
               </motion.div>
             </div>
@@ -324,16 +458,26 @@ export default function App() {
 // Helpers
 function getIcon(type: string) {
   switch (type) {
-    case 'positive': return <CheckCircle2 className="w-4 h-4" />;
-    case 'warning': return <AlertTriangle className="w-4 h-4" />;
-    default: return <Info className="w-4 h-4" />;
+    case 'positive':
+      return <CheckCircle2 className="w-4 h-4" />;
+
+    case 'warning':
+      return <AlertTriangle className="w-4 h-4" />;
+
+    default:
+      return <Info className="w-4 h-4" />;
   }
 }
 
 function getIconColor(type: string) {
   switch (type) {
-    case 'positive': return 'text-emerald-500';
-    case 'warning': return 'text-amber-500';
-    default: return 'text-blue-500';
+    case 'positive':
+      return 'text-emerald-500';
+
+    case 'warning':
+      return 'text-amber-500';
+
+    default:
+      return 'text-blue-500';
   }
 }
