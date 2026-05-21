@@ -219,7 +219,7 @@ const scrollToAnalyzer = () => {
   }}
   className="hover:opacity-60 transition-opacity"
 >
-  Analyze New
+  Analyze 
 </button>
 
     <a
